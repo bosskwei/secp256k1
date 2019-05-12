@@ -5025,8 +5025,40 @@ void print_hex(unsigned char buf[]){
   printf("\n");
 }
 
+void test_ecdsa_field(void) {
+  int i;
+  unsigned char n_b[32];
+  secp256k1_fe a, b, r;
+
+  /* a */
+  for (i = 0; i<32; i++) {n_b[i] = 0x00; }
+  n_b[31] = 0x02;
+  secp256k1_fe_set_b32(&a, n_b);
+
+  /* b */
+  for (i = 0; i<32; i++) {n_b[i] = 0x00; }
+  n_b[31] = 0x12;
+  secp256k1_fe_set_b32(&b, n_b);
+
+  /* r */
+  secp256k1_fe_mul(&r, &a, &b);
+
+  /* out */
+  printf("test_ecdsa_field():\n");
+  secp256k1_fe_normalize(&r);
+  secp256k1_fe_get_b32(n_b, &r);
+  print_hex(n_b);
+}
+
 void test_pubkey_generate(void) {
-  /* 0xd72f -> 00020936f0b63e3a3552f8021dfa94333c4c61934b76385a23249c87ec40eaad */
+  /*
+   * private: 0xd72f
+   * public: 00020936f0b63e3a3552f8021dfa94333c4c61934b76385a23249c87ec40eaad
+   * 
+   * private: 0x01
+   * public: G = (0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798,
+                  0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8)
+   */
   int i;
   unsigned char n_b[32];
   secp256k1_scalar n_s;
@@ -5051,6 +5083,7 @@ void test_pubkey_generate(void) {
   secp256k1_ecmult_context_init(&ecmul_ctx);
 
   /* set x to G*n */
+  printf("test_pubkey_generate():\n");
   secp256k1_ecmult(&ecmul_ctx, &xj, &g, &n_s, &null_s);
   secp256k1_ge_set_gej(&x, &xj);
   secp256k1_fe_normalize(&(x.x)); secp256k1_fe_normalize(&(x.y));
@@ -5112,6 +5145,7 @@ int main(int argc, char **argv) {
         CHECK(secp256k1_context_randomize(ctx, secp256k1_rand_bits(1) ? run32 : NULL));
     }
 
+    test_ecdsa_field();
     test_pubkey_generate();
 
     run_rand_bits();
