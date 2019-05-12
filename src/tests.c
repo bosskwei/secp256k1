@@ -5016,6 +5016,48 @@ void run_ecdsa_openssl(void) {
 # include "modules/recovery/tests_impl.h"
 #endif
 
+void print_hex(unsigned char buf[]){
+  int i;
+  for (i = 0; i < 32; i++)
+  {
+      printf("%02x", buf[i]);
+  }
+  printf("\n");
+}
+
+void test_pubkey_generate(void) {
+  /* 0xd72f -> 00020936f0b63e3a3552f8021dfa94333c4c61934b76385a23249c87ec40eaad */
+  int i;
+  unsigned char n_b[32];
+  secp256k1_scalar n_s;
+  secp256k1_scalar null_s;
+  secp256k1_gej g;
+  unsigned char pub[32];
+  secp256k1_ecmult_context ecmul_ctx;
+  secp256k1_gej xj;
+  secp256k1_ge x;
+
+  /* endianness */
+  for (i = 0; i<32; i++) {n_b[i] = 0x00; }
+  /* n_b[30] = 0xd7; n_b[31] = 0x2f; */
+  n_b[31] = 0x01;
+  
+  secp256k1_scalar_set_b32(&n_s, n_b, NULL);
+
+  secp256k1_scalar_set_int(&null_s, 0);
+  
+  secp256k1_gej_set_ge(&g, &secp256k1_ge_const_g);
+  
+  secp256k1_ecmult_context_init(&ecmul_ctx);
+
+  /* set x to G*n */
+  secp256k1_ecmult(&ecmul_ctx, &xj, &g, &n_s, &null_s);
+  secp256k1_ge_set_gej(&x, &xj);
+  secp256k1_fe_normalize(&(x.x)); secp256k1_fe_normalize(&(x.y));
+  secp256k1_fe_get_b32(pub, &(x.x)); print_hex(pub);
+  secp256k1_fe_get_b32(pub, &(x.y)); print_hex(pub);
+}
+
 int main(int argc, char **argv) {
     unsigned char seed16[16] = {0};
     unsigned char run32[32] = {0};
@@ -5069,6 +5111,8 @@ int main(int argc, char **argv) {
         secp256k1_rand256(run32);
         CHECK(secp256k1_context_randomize(ctx, secp256k1_rand_bits(1) ? run32 : NULL));
     }
+
+    test_pubkey_generate();
 
     run_rand_bits();
     run_rand_int();
