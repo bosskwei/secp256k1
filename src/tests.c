@@ -13,6 +13,7 @@
 #include <string.h>
 
 #include <time.h>
+#include <sys/time.h>
 
 #include "secp256k1.c"
 #include "include/secp256k1.h"
@@ -5060,7 +5061,10 @@ void test_pubkey_generate(void) {
                   0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8)
    */
   int i;
-  unsigned char n_b[32];
+  unsigned char n_b[32] = {0xf8, 0xef, 0x38, 0x0d, 0x6c, 0x05, 0x11, 0x6d,
+                           0xbe, 0xd7, 0x8b, 0xfd, 0xd6, 0xe6, 0x62, 0x5e,
+                           0x57, 0x42, 0x6a, 0xf9, 0xa0, 0x82, 0xb8, 0x1c,
+                           0x2f, 0xa2, 0x7b, 0x06, 0x98, 0x4c, 0x11, 0xf3};
   secp256k1_scalar n_s;
   secp256k1_scalar null_s;
   secp256k1_gej g;
@@ -5068,11 +5072,11 @@ void test_pubkey_generate(void) {
   secp256k1_ecmult_context ecmul_ctx;
   secp256k1_gej xj;
   secp256k1_ge x;
+  struct timeval tval_before, tval_after, tval_result;
+
+  gettimeofday(&tval_before, NULL);
 
   /* endianness */
-  for (i = 0; i<32; i++) {n_b[i] = 0x00; }
-  /* n_b[30] = 0xd7; n_b[31] = 0x2f; */
-  n_b[31] = 0x01;
   
   secp256k1_scalar_set_b32(&n_s, n_b, NULL);
 
@@ -5089,6 +5093,11 @@ void test_pubkey_generate(void) {
   secp256k1_fe_normalize(&(x.x)); secp256k1_fe_normalize(&(x.y));
   secp256k1_fe_get_b32(pub, &(x.x)); print_hex(pub);
   secp256k1_fe_get_b32(pub, &(x.y)); print_hex(pub);
+
+  gettimeofday(&tval_after, NULL);
+  tval_result.tv_sec = tval_after.tv_sec - tval_before.tv_sec;
+  tval_result.tv_usec = tval_after.tv_usec - tval_before.tv_usec;
+  printf("Time elapsed: %ld.%06ld\n", (long int)tval_result.tv_sec, (long int)tval_result.tv_usec);
 }
 
 int main(int argc, char **argv) {

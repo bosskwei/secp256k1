@@ -1,5 +1,6 @@
 import os
 import time
+import random
 import hashlib
 import logging
 import multiprocessing
@@ -46,7 +47,8 @@ class Secp256k1:
         x1, y1 = p1
         x2, y2 = p2
         if x1 == x2:
-            return self.pt_dbl(p1)
+            raise RuntimeError('wrong ec points, divided by zero')
+            # return self.pt_dbl(p1)
 
         # calculate (y1-y2)/(x1-x2)  modulus p
         slope = (y1 - y2) * self.mod_inverse(x1 - x2)
@@ -78,10 +80,19 @@ class Secp256k1:
 
 
 def test_ecc():
+    #
     private_key = 0xf8ef380d6c05116dbed78bfdd6e6625e57426af9a082b81c2fa27b06984c11f3
     public_key = Secp256k1().generate_pubkey(private_key)
     assert public_key == (0x71ee918bc19bb566e3a5f12c0cd0de620bec1025da6e98951355ebbde8727be3,
                           0x37b3650efad4190b7328b1156304f2e9e23dbb7f2da50999dde50ea73b4c2688)
+
+
+def test_ecc_infinite():
+    #
+    ciper = Secp256k1()
+    while True:
+        private_key = random.randrange(1, ciper.M)
+        ciper.generate_pubkey(private_key)
 
 
 class Generator(Secp256k1):
@@ -153,7 +164,8 @@ class BtcAddress:
 
     def generate_ripemd160hash(self, public_key):
         x, y = public_key
-        s = b'\x04' + x.to_bytes(length=32, byteorder='big') + y.to_bytes(length=32, byteorder='big')
+        s = b'\x04' + x.to_bytes(length=32, byteorder='big') + \
+            y.to_bytes(length=32, byteorder='big')
 
         h = hashlib.sha256()
         h.update(s)
@@ -176,31 +188,36 @@ class BtcAddress:
         src = src.to_bytes(length=25, byteorder='big')
         src = src[1:21]
         return src
-    
+
     def ripemd160hash_to_address(self, h160):
-        return self.prefix + '{}'.format(self.base58_check(h160)) 
+        return self.prefix + '{}'.format(self.base58_check(h160))
 
 
 def test_address():
     public_key = (0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798,
                   0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8)
-    assert BtcAddress().generate_address(public_key) == '1EHNa6Q4Jz2uvNExL497mE43ikXhwF6kZm'
+    assert BtcAddress().generate_address(
+        public_key) == '1EHNa6Q4Jz2uvNExL497mE43ikXhwF6kZm'
 
     public_key = (0x71ee918bc19bb566e3a5f12c0cd0de620bec1025da6e98951355ebbde8727be3,
                   0x37b3650efad4190b7328b1156304f2e9e23dbb7f2da50999dde50ea73b4c2688)
-    assert BtcAddress().generate_address(public_key) == '17wz8ZB1My8KK6n9sHGrGtYiDeBCWm3GU'
+    assert BtcAddress().generate_address(
+        public_key) == '17wz8ZB1My8KK6n9sHGrGtYiDeBCWm3GU'
 
     pubkey_ripemd160 = b'\x91\xb2K\xf9\xf5(\x852\x96\n\xc6\x87\xab\xb05\x12{\x1d(\xa5'
-    assert BtcAddress().address_to_ripemd160('1EHNa6Q4Jz2uvNExL497mE43ikXhwF6kZm') == pubkey_ripemd160
+    assert BtcAddress().address_to_ripemd160(
+        '1EHNa6Q4Jz2uvNExL497mE43ikXhwF6kZm') == pubkey_ripemd160
 
     pubkey_ripemd160 = b'\x01Pe\x1a\xd9\x130\xad\x19\x13\xcb\x04\x91(\x17\xa8\xd9\x80\xc9\xad'
-    assert BtcAddress().address_to_ripemd160('17wz8ZB1My8KK6n9sHGrGtYiDeBCWm3GU') == pubkey_ripemd160
+    assert BtcAddress().address_to_ripemd160(
+        '17wz8ZB1My8KK6n9sHGrGtYiDeBCWm3GU') == pubkey_ripemd160
 
 
 def main():
     test_ecc()
     test_generator()
     test_address()
+    test_ecc_infinite()
 
 
 def init_logging():
